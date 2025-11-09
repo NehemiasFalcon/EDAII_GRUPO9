@@ -1,6 +1,10 @@
 import pygame
+import Jugador
+import random
+import time
+import math
 from Grafo import Grafo
-from Jugador import Jugador
+
 
 # ---------- Configuración ----------
 pygame.init()
@@ -12,6 +16,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 BLUE = (135, 206, 235)
 RED = (255, 0, 0)
+COLORS = [(255, 0, 0), (0, 255, 0), (255, 165, 0), (128, 0, 128), (0, 0, 255)]
 
 FPS = 30
 RADIUS = 20
@@ -37,12 +42,20 @@ node_positions = {
 }
 
 # ---------- Jugador ----------
-player = Jugador("M")
-player.agregar_habilidad("fuerza", 10)  # Ejemplo de habilidad
-player.agregar_habilidad("velocidad", 8)
+jugadores = []
+hombres = []
+mujeres = []
+for i in range(3):
+    h = Jugador.Jugador(f"Hombre {i+1}", "Masculino")
+    m = Jugador.Jugador(f"Mujer {i+1}", "Femenino")
+    hombres.append(h)
+    mujeres.append(m)
+    jugadores.append(h)
+    jugadores.append(m)
 
 current_node = 0
-player.agregar_nodo_recorrido(current_node)
+for player in jugadores:
+    player.agregar_nodo_recorrido(current_node)
 
 # ---------- Funciones ----------
 def draw_graph():
@@ -62,54 +75,58 @@ def draw_graph():
         font = pygame.font.SysFont(None, 24)
         img = font.render(str(node), True, BLACK)
         WIN.blit(img, (pos[0]-8, pos[1]-10))
-    # Mostrar vida y habilidades
+    
+    # Dibujar jugadores
     font = pygame.font.SysFont(None, 24)
+    for j in jugadores:
+        pos = node_positions[j.get_nodos_recorridos()[-1]]
+        pygame.draw.circle(WIN, COLORS[i % len(COLORS)], pos, RADIUS // 2)
+        text = font.render(j.get_nombre(), True, BLACK)
+        WIN.blit(text, (pos[0] - 25, pos[1] - 30))
+    
+
+    # Mostrar vida y habilidades
+    """font = pygame.font.SysFont(None, 24)
     vida_text = font.render(f"Vida: {player.get_vida()}", True, BLACK)
-    fuerza_text = font.render(f"Fuerza: {player.obtener_habilidad('fuerza')}", True, BLACK)
+    fuerza_text = font.render(f"Fuerza: {player.obtener_habilidad('Fuerza')}", True, BLACK)
+    velocidad_text = font.render(f"Velocidad: {player.obtener_habilidad('Velocidad')}", True, BLACK)
+    inteligencia_text = font.render(f"Inteligencia: {player.obtener_habilidad('Inteligencia')}", True, BLACK)
+    carisma_text = font.render(f"Carisma: {player.obtener_habilidad('Carisma')}", True, BLACK)
+    condicionFis_text = font.render(f"Cond. Fis: {player.obtener_habilidad('Condicion_Fisica')}", True, BLACK)
     WIN.blit(vida_text, (10, 10))
-    WIN.blit(fuerza_text, (10, 30))    
+    WIN.blit(fuerza_text, (470, 10))
+    WIN.blit(velocidad_text, (470, 30))
+    WIN.blit(inteligencia_text, (470, 50))
+    WIN.blit(carisma_text, (470, 70))
+    WIN.blit(condicionFis_text, (470, 90))""" 
     pygame.display.update()
+
+def mover_jugadores():
+    for j in jugadores:
+        actual = j.get_nodos_recorridos()[-1]
+        vecinos = g.get_neighbors(actual)
+        if vecinos:
+            sig = random.choice(vecinos)
+            j.agregar_nodo_recorrido(sig)
 
 # ---------- Loop principal ----------
 clock = pygame.time.Clock()
+mov_tiempo = 2
+sig_mov = time.time() + mov_tiempo
+
 run = True
 
 while run:
     clock.tick(FPS)
     draw_graph()
-    
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
-        elif event.type == pygame.KEYDOWN:
-            neighbors = g.get_neighbors(current_node)
-            moved = False
-            # Movimiento con flechas (simple)
-            if event.key == pygame.K_UP:
-                for n in neighbors:
-                    if node_positions[n][1] < node_positions[current_node][1]:
-                        current_node = n
-                        moved = True
-                        break
-            elif event.key == pygame.K_DOWN:
-                for n in neighbors:
-                    if node_positions[n][1] > node_positions[current_node][1]:
-                        current_node = n
-                        moved = True
-                        break
-            elif event.key == pygame.K_LEFT:
-                for n in neighbors:
-                    if node_positions[n][0] < node_positions[current_node][0]:
-                        current_node = n
-                        moved = True
-                        break
-            elif event.key == pygame.K_RIGHT:
-                for n in neighbors:
-                    if node_positions[n][0] > node_positions[current_node][0]:
-                        current_node = n
-                        moved = True
-                        break
-            if moved:
-                player.agregar_nodo_recorrido(current_node)
 
+    now = time.time()
+    if now >= sig_mov:
+        mover_jugadores()
+        sig_mov = now + mov_tiempo
+        
 pygame.quit()
