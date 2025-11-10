@@ -200,12 +200,12 @@ def gale_shapley(chicos, chicas): #Lo hecho en clase a Python menos chicaprefs
 
             #Validación visual
             print(f"❤️  {chicas[g].get_nombre()} elige por primera vez a {chicos[b].get_nombre()} "
-                  f"(basado en su habilidad preferida: {chicas[g].get_habilidad_pref()})")
+                f"(basado en su habilidad preferida: {chicas[g].get_habilidad_pref()})")
 
         else:
-            #el chico ya tiene pareja, no cambia porque el chico no decide
+            #el chico ya tiene pareja, no cambia porque el chico no decide aun
             print(f"❌  {chicas[g].get_nombre()} intenta elegir a {chicos[b].get_nombre()}, "
-                  f"pero él ya está emparejado con {chicas[pareja_chico[b]].get_nombre()}.")
+                f"pero él ya está emparejado con {chicas[pareja_chico[b]].get_nombre()}.")
             # La chica intentará con su siguiente opción en el próximo ciclo
             continue
 
