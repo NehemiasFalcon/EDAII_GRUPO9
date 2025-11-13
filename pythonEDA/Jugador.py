@@ -87,10 +87,6 @@ class Jugador:
         # Generar aleatoriamente una habilidad preferencia respecto a la lista de habilidades_base
         self.__habilidad_pref = habilidades_base[random.randint(0,4)]
         
-        # Verificar que todo esté funcionando (validación)
-        self.__hashHabilidades.imprimir(self.__nombre)
-        print(f"Su habilidad preferida es: {self.__habilidad_pref}")
-        print("\n")
 
     def cambiar_vida(self, cambio):
         self.__vida += cambio
@@ -129,9 +125,16 @@ class Jugador:
     def get_pareja(self):
         return self.__pareja
 
+    def get_color(self):
+        return self.__color
 
     def __str__(self):
         return f"{self.__nombre} ({self.__genero})"
+    
+    def mostrar_habilidades(self):
+        self.__hashHabilidades.imprimir(self.__nombre)
+        print(f"Su habilidad preferida es: {self.__habilidad_pref}")
+        print("\n")
     
 
 # Crear jugadores
