@@ -23,7 +23,24 @@ class Grafo:
         self.k_sigmoidea = 1.0  # Sigmoidea
         self.EPS = 0.1  # Epilson, indica mínimo valor permitido
         self.node_positions = node_positions or {i: (0,0) for i in range(n)}
-    
+        self.jugadores_en_nodo = {i: [] for i in range(n)}  # lista de jugadores por nodo
+
+        # Agregar un jugador a un nodo
+    def agregar_jugador(self, nodo, jugador):
+        if jugador not in self.jugadores_en_nodo[nodo]:
+            self.jugadores_en_nodo[nodo].append(jugador)
+
+    # Remover un jugador de un nodo
+    def remover_jugador(self, nodo, jugador):
+        if jugador in self.jugadores_en_nodo[nodo]:
+            self.jugadores_en_nodo[nodo].remove(jugador)
+
+    # Obtener jugadores en un nodo
+    def get_jugadores(self, nodo):
+        return self.jugadores_en_nodo.get(nodo, [])
+
+
+
     def agregarLado(self, x, y, w):
         curr = ListaLados(x, y, w)
         curr.next = self.adjlist[x]

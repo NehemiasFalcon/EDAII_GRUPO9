@@ -10,7 +10,7 @@ from Jugador import HashTable
 
 # ---------- Configuración ----------
 pygame.init()
-WIDTH, HEIGHT = 600, 400
+WIDTH, HEIGHT = 1200, 800
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Juego de Grafo")
 
@@ -26,31 +26,65 @@ RADIUS = 20
 # ---------- Crear grafo ---------- HECHO EN CLASE
 # Posiciones de los nodos
 node_positions = {
-    0: (50, 200),
-    1: (150, 100),
-    2: (150, 300),
-    3: (250, 150),
-    4: (250, 250),
-    5: (350, 100),
-    6: (350, 300),
-    7: (450, 200)
+    0: (50, 350),
+    1: (200, 100),
+    2: (200, 300),
+    3: (200, 500),
+    4: (200, 700),
+    15: (350, 50),
+    5: (350, 200),
+    6: (350, 600),
+    14: (350, 750),
+    8: (500, 125),
+    7: (500, 400),
+    10: (500, 675),
+    9: (650, 150),
+    16: (650, 350),
+    11: (650, 550),
+    12: (800, 425),
+    13: (800, 650)
 }
 
 
-numv = 8 #numero de vertices
+numv = 17 #numero de vertices
 g = Grafo(numv, es_dirigido=False, node_positions=node_positions) #cambiar a True si es dirigido
 edge_list = [
     "0,1,10",
     "0,2,3",
+    "0,3,6",
+    "0,4,8",
     "1,2,5",
-    "1,3,9",
-    "2,4,1",
-    "3,5,6",
-    "5,7,8",
-    "3,4,9",
-    "4,6,14",
-    "5,6,2",
-    "6,7,7"
+    "1,5,9",
+    "1,15,4",
+    "2,3,1",
+    "2,5,5",
+    "3,4,7",
+    "3,6,6",
+    "4,6,5",
+    "4,14,12",
+    "5,15,9",
+    "5,8,8",
+    "5,7,2",
+    "15,8,9",
+    "6,7,1",
+    "6,14,5",
+    "6,10,10",
+    "6,5,15",
+    "14,10,15",
+    "8,7,4",
+    "8,9,10",
+    "7,9,5",
+    "7,11,13",
+    "7,10,12",
+    "10,11,13",
+    "9,12,5",
+    "16,7,5",
+    "16,9,9",
+    "16,11,14",
+    "16,12,8",
+    "11,12,3",
+    "11,13,7",
+    "12,13,8",
 ]
 g.read(edge_list)
 print("---GRAFO CREADO---")
@@ -173,6 +207,9 @@ def mover_jugadores():
         actual = j.get_nodos_recorridos()[-1]
         sig = actual
 
+        # --- NUEVO: remover jugador del nodo actual ---
+        g.remover_jugador(actual, j)
+
         # --- Lógica de Prim para Hombre 1 y Mujer 1 ---
         if j.get_nombre() in ["Hombre 1", "Mujer 1"]:
             # Si ya recorrió todo el camino, calcular uno nuevo
@@ -242,15 +279,25 @@ def mover_jugadores():
             print(f"A*: {j.get_nombre()} va al nodo {sig}")
 
         # --- Movimiento aleatorio para el resto ---
+        # --- Movimiento aleatorio ---
         else:
             vecinos = g.get_neighbors(actual)
             sig = random.choice(vecinos) if vecinos else actual
-            j.agregar_nodo_recorrido(sig)
             print(f"RANDOM: {j.get_nombre()} va al nodo {sig}")
 
-    
-        # Avanzar al siguiente nodo
+        # ---- LIMITE DE 2 JUGADORES POR NODO ----
+        jugadores_en_destino = 0
+        for other in jugadores:
+            if other is not j and other.get_nodos_recorridos() and other.get_nodos_recorridos()[-1] == sig:
+                jugadores_en_destino += 1
+
+        if jugadores_en_destino >= 2:
+            print(f"⚠️ Nodo {sig} está LLENO (2 jugadores). {j.get_nombre()} no puede entrar.")
+            sig = actual  # se queda
+
+        # --- AHORA sí mover al jugador ---
         j.agregar_nodo_recorrido(sig)
+        g.agregar_jugador(sig, j)
             
         # Evitar cuellos de botella
         # Actualizar contador de visitas
@@ -258,10 +305,57 @@ def mover_jugadores():
         nodo_visitas.insert(str(sig), visitas_actual + 1)
         # Actualizar congestión con valor real de visitas
         g.actualizar_congestion(sig, visitas_actual + 1)
+   
+    # ---------- Peleas entre jugadores en cada nodo ----------
+    for nodo, lista_jugadores in g.jugadores_en_nodo.items():
+        if len(lista_jugadores) >= 2:
+            jugador1 = lista_jugadores[0]
+            jugador2 = lista_jugadores[1]
+
+            print(f"\n⚔️ PELEA en nodo {nodo}: {jugador1.get_nombre()} VS {jugador2.get_nombre()}")
+
+            count_j1 = 0
+            count_j2 = 0
+            for habilidad in Jugador.Jugador.habilidades_base:
+                h1_val = jugador1.obtener_habilidad(habilidad)
+                h2_val = jugador2.obtener_habilidad(habilidad)
+                if h1_val > h2_val:
+                    count_j1 += 1
+                elif h2_val > h1_val:
+                    count_j2 += 1
+
+            if count_j1 >= 3:
+                ganador, perdedor = jugador1, jugador2
+            elif count_j2 >= 3:
+                ganador, perdedor = jugador2, jugador1
+            else:
+                ganador = perdedor = None
+
+            if ganador:
+                print(f"🏆 Ganador: {ganador.get_nombre()} | Perdedor: {perdedor.get_nombre()} pierde 20 de vida")
+                perdedor.cambiar_vida(-20)
+            else:
+                print("🤝 Empate: Ningún jugador pierde vida")
+
+    # ---------- Mostrar jugadores por nodo ----------
+    print("\n======= ESTADO DE JUGADORES POR NODO =======")
+    for nodo, lista_jugadores in g.jugadores_en_nodo.items():
+        if lista_jugadores:
+            print(f"\nNodo {nodo} ({len(lista_jugadores)} jugador(es)):")
+            for jugador in lista_jugadores:
+                print(f"Nombre: {jugador.get_nombre()}")
+                print(f"Género: {jugador.get_genero()}")
+                print(f"Vida: {jugador.get_vida()}")
+                print(f"Nodos recorridos: {jugador.get_nodos_recorridos()}")
+                print(f"Habilidad preferida: {jugador.get_habilidad_pref()}")
+                print(f"Promedio de habilidades: {jugador.promedio_habilidades():.2f}")
+                print("Habilidades individuales:")
+                jugador.mostrar_habilidades()
+                print("----------------------------")
     
 # ---------- Loop principal ----------
 clock = pygame.time.Clock()
-mov_tiempo = 2
+mov_tiempo = 3
 sig_mov = time.time() + mov_tiempo
 
 run = True
