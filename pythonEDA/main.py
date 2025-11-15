@@ -134,13 +134,13 @@ m2.ultima_ruta = []
 m2.ultima_ruta_obj = None
 
 for j in [h2, m2]:
-    j.prefiere_impar = True       # Baja costo para nodos impares
-    j.modo_follow = False         # Inicio sin persecución
-    # Objetivo temporal aleatorio, distinto al start
+    j.prefiere_impar = True       # Baja costo para nodos impares porque hay preferencias por ellos
+    # Objetivo distinto al start
     start = j.get_nodos_recorridos()[-1]
     j.objetivo = start
     while j.objetivo == start:
         j.objetivo = random.randint(0, g.numvertices - 1)
+
 
 # El resto se moverán aleatoriamente
 
@@ -244,38 +244,52 @@ def mover_jugadores():
 
         # --- Lógica Algoritmo A* para Hombre 2 y Mujer 2 ---
         elif j.get_nombre() in ["Hombre 2", "Mujer 2"]:
-            # Si llegó al objetivo, elegir uno nuevo diferente
             if actual == j.objetivo:
+                # Si llegó al objetivo, elegir uno nuevo diferente
                 nuevo_obj = actual
                 while nuevo_obj == actual:
                     nuevo_obj = random.randint(0, g.numvertices - 1)
-                print(f"A*: {j.get_nombre()} ha llegado a su objetivo y elige nuevo objetivo: desde nodo {actual} a {nuevo_obj}")
+                print(f"{j.get_nombre()} ha llegado a su objetivo y elige nuevo objetivo: "
+                    f"desde nodo {actual} a {nuevo_obj}")
+
                 j.objetivo = nuevo_obj
+                # Recalcular ruta con A* modificado
+                j.ultima_ruta = g.a_star_modificado(j, actual, j.objetivo, nodo_visitas)
+                j.ultima_ruta_obj = j.objetivo
+                print(f"{j.get_nombre()} ruta completa hacia nodo {j.objetivo}: {j.ultima_ruta}")
 
-            # Recalcular ruta completa desde nodo actual hasta objetivo
-            j.ultima_ruta = g.a_star_modificado(j, actual, j.objetivo, nodo_visitas)
-            j.ultima_ruta_obj = j.objetivo
-            print(f"{j.get_nombre()} ruta completa hacia nodo {j.objetivo}: {j.ultima_ruta}")
-
-            # Avanzar un nodo por tick
+            # --- Avanzar un nodo por tick ---
             if len(j.ultima_ruta) > 1:
-                # Tomar siguiente nodo
+                # Buscar índice del nodo actual en la ruta
                 idx_actual = j.ultima_ruta.index(actual)
                 sig = j.ultima_ruta[idx_actual + 1]
             else:
-                # Si ruta solo tiene un nodo (ya está en objetivo), tomar nuevo objetivo inmediatamente
+                # Si la ruta tiene un solo nodo -> ya está en el objetivo -> elegir otro objetivo
                 nuevo_obj = actual
                 while nuevo_obj == actual:
                     nuevo_obj = random.randint(0, g.numvertices - 1)
+
                 j.objetivo = nuevo_obj
+                # Movimiento dinámico: En cada tick/paso, el jugador recalcula con A* la ruta óptima hacia el mismo objetivo
+                # Luego avanza solo un paso y en el siguiente tick la ruta se vuelve a recalcular
                 j.ultima_ruta = g.a_star_modificado(j, actual, j.objetivo, nodo_visitas)
                 j.ultima_ruta_obj = j.objetivo
-                print(f"{j.get_nombre()} ha llegado a su objetivo y elige nuevo objetivo: desde nodo {actual} a {j.objetivo}")
+
+                print(f"{j.get_nombre()} ha llegado a su objetivo y elige nuevo objetivo: "
+                    f"desde nodo {actual} a {j.objetivo}")
                 print(f"{j.get_nombre()} ruta completa hacia nodo {j.objetivo}: {j.ultima_ruta}")
+
                 if len(j.ultima_ruta) == 1:
+                    # La ruta solo tiene el objetivo -> ya está ahí, no avanza
                     sig = j.ultima_ruta[0]
                 else:
+                    # A* devuelve la ruta con el nodo actual al inicio-> 
+                        # Si el primer nodo de la ruta es el actual, avanzar al siguiente
+                        # Si no, avanzar al primer nodo de la ruta
                     sig = j.ultima_ruta[0] if j.ultima_ruta[0] != actual else j.ultima_ruta[1]
+
+            # Avanzar hacia el siguiente nodo
+            j.agregar_nodo_recorrido(sig)
             print(f"A*: {j.get_nombre()} va al nodo {sig}")
 
         # --- Movimiento aleatorio para el resto ---
@@ -390,3 +404,4 @@ pygame.quit()
 print("\nEstado final de los jugadores:")
 for j in jugadores:
     print(f"  -> {j.get_nombre()} terminó en el nodo: {j.get_nodos_recorridos()[-1]}")
+
