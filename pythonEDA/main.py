@@ -31,18 +31,18 @@ node_positions = {
     2: (200, 300),
     3: (200, 500),
     4: (200, 700),
-    15: (350, 50),
     5: (350, 200),
     6: (350, 600),
-    14: (350, 750),
-    8: (500, 125),
     7: (500, 400),
-    10: (500, 675),
+    8: (500, 125),
     9: (650, 150),
-    16: (650, 350),
+    10: (500, 675),
     11: (650, 550),
     12: (800, 425),
-    13: (800, 650)
+    13: (800, 650),
+    14: (350, 750),
+    15: (350, 50),
+    16: (650, 350)
 }
 
 
@@ -334,6 +334,17 @@ def mover_jugadores():
             if ganador:
                 print(f"🏆 Ganador: {ganador.get_nombre()} | Perdedor: {perdedor.get_nombre()} pierde 20 de vida")
                 perdedor.cambiar_vida(-20)
+
+                # Revisar si perdió toda la vida
+                if perdedor.get_vida() <= 0:
+                    print(f"💀 {perdedor.get_nombre()} ha muerto y desaparece del juego")
+                    # Remover del nodo actual
+                    if nodo in g.jugadores_en_nodo and perdedor in g.jugadores_en_nodo[nodo]:
+                        g.jugadores_en_nodo[nodo].remove(perdedor)
+                    # Remover de la lista principal de jugadores
+                    if perdedor in jugadores:
+                        jugadores.remove(perdedor)
+
             else:
                 print("🤝 Empate: Ningún jugador pierde vida")
 
