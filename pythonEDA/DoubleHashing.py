@@ -12,7 +12,7 @@ class HashTable:
         self.__bins = [None] * size
         self.__num_keys = 0
         # Se establece el primo menor respecto al tamaño fijo que se ha establecido antes, el cual viene a ser size = 5. Esto se debe a que
-        # el double hashing recomienda que sea así para que el salto que se hará, sea un recorrido dentro de la tabla.
+        # el double hashing recomienda que sea así para que el salto que se hará sea un recorrido dentro de la tabla.
         self.__R = 3
 
     # Código trabajado de hashFunction pasado a lenguaje python, sin cambios.
@@ -22,7 +22,7 @@ class HashTable:
             hash_val = (hash_val * 31 + ord(c)) % self.__size
         return hash_val
 
-    # Función hashFunction2 que ayuda a determinar el salto que dará por la clave que se ingresará
+    # Función hashFunction2 que ayuda a determinar el salto que dará por la clave que se ingresará y extraído del libro de Weiss descrito textualmente
     def hashFunction2(self, key: str):
         hash_val = 0
         # Se usará otro primo diferente respecto al hashFunction para que devuelva un valor diferente,
@@ -37,8 +37,8 @@ class HashTable:
             step = 1
         return step
 
-    # Función find que cumple el mismo objetivo del libro de Weiss donde se adaptó el double hashing (en el que se puede ver un método find), el cual
-    # busca determinar la posición de la clave, pero mediante el step, de modo que mejora la búsqueda.
+    # Función find que cumple el mismo objetivo del libro de Weiss donde se adaptó el double hashing (descrito textualmente), el cual
+    # busca determinar la posición de la clave pero mediante el step.
     def find(self, key: str):
         index = self.hashFunction(key)
         step  = self.hashFunction2(key)
@@ -65,7 +65,7 @@ class HashTable:
 
         return True
 
-    #La función lookup fue modificada para que haga los saltos establecidos en cada llave, de modo que, se optimice la búsqueda.
+    #La función lookup fue modificada para que haga los saltos establecidos en cada llave.
     def lookup(self, key: str):
         index = self.hashFunction(key)
         step = self.hashFunction2(key)
@@ -74,7 +74,7 @@ class HashTable:
         while self.__bins[index] is not None and count < self.__size:
             if not self.__bins[index]._isDeleted and self.__bins[index]._key == key:
                 return self.__bins[index]._value
-            # En vez de sumar + 1, sumará con el salto para que realice una búsqueda más rapida
+            # En vez de sumar + 1 como el código base, sumará con el salto
             index = (index + step) % self.__size
             count += 1
         return None

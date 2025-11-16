@@ -88,27 +88,25 @@ class Grafo:
         return neighbors
 
     # --- Manejo de congestión ---
-    # Actualizar peso base de un nodo y sus vecinos (congestión)
     def actualizar_pesos(self, nodo, incremento):
         self.peso_nodos[nodo] += incremento
         for vecino in self.get_neighbors(nodo):
             self.peso_nodos[vecino] += 2 # Aumenta en 2 los pesos de los vecinos del nodo congestionado
 
-    # Actualizar congestión y alertas
     def actualizar_congestion(self, nodo, visitas):
         # Si llegó al umbral y aún no estaba en alerta
         if visitas >= self.umbral and self.alerta[nodo] == 0:
             print(f"⚠️ Nodo {nodo} congestionado!")
             self.alerta[nodo] = 1
             self.cola_congestion.append(nodo)
-            self.actualizar_pesos(nodo, incremento=3) # Aumentar en 3 el peso del nodo congestionado
+            self.actualizar_pesos(nodo, incremento=3) # Aumenta peso del nodo congestionado en 3 unidades
 
 
-        # Si hay demasiados congestionados -> descongestionar uno
+        # Si más de 3 nodos congestionados -> descongestiona uno
         while len(self.cola_congestion) > self.max_congestion:
             nodo_a_descongestionar = self.cola_congestion.pop(0)
             self.alerta[nodo_a_descongestionar] = 0
-            self.peso_nodos[nodo_a_descongestionar] = max(1, self.peso_nodos[nodo_a_descongestionar] - 2) # Disminuye en 2 unidades el peso de los nodos descongestionados
+            self.peso_nodos[nodo_a_descongestionar] = max(1, self.peso_nodos[nodo_a_descongestionar] - 2) # Reduce peso del nodo descongestionado en 2 unidades
             print(f"✅ Nodo {nodo_a_descongestionar} descongestionado")
 
 
@@ -116,83 +114,81 @@ class Grafo:
 
 
     #----- Implementación del algoritmo A* -----
-    # Función heurística: distancia absoluta entre el nodo actual y el objetivo
+    # Distancia euclidiana entre el nodo actual y el objetivo
     def heuristica(self, nodo, objetivo):
         x1, y1 = self.node_positions[nodo]
         x2, y2 = self.node_positions[objetivo]
-        return math.hypot(x2 - x1, y2 - y1)
+        return math.hypot(x2 - x1, y2 - y1) #√((x2 − x1)² + (y2 − y1)²)
 
 
     # Peso dinámico considerando congestión y preferencias del jugador
     def peso_dinamico(self, nodo, jugador, nodo_visitas):
         visitas = nodo_visitas.lookup(str(nodo)) or 0
         peso_base = self.peso_nodos.get(nodo, 1.0) # peso histórico/acumulado
-        congest = 3 / (1 + math.exp(-(visitas - self.umbral)/self.k_sigmoidea)) # congestión actual
-        #Si visitas << umbral, congest = 0 -> el nodo está libre, costo bajo
-        #Si visitas = umbral, congest = 1.5 -> empieza a congestionarse, costo aumenta
-        #Si visitas >> umbral, congest = 3 -> nodo muy congestionado, costo máximo
+        congest = 3 / (1 + math.exp(-(visitas - self.umbral)/self.k_sigmoidea)) # congestión modelada con sigmoidea
         indicador_impar = 1 if (nodo % 2 != 0 and getattr(jugador, "prefiere_impar", False)) else 0 # Preferencia por nodos impares
         peso_real = peso_base + self.factor_congestion * congest - self.factor_preferencia * indicador_impar # Peso final dinámico
-        return max(peso_real, self.EPS)
+        return max(peso_real, self.EPS) # Evita peso cero
 
 
     # Algoritmo A* modificado con selección aleatoria entre caminos óptimos
     def a_star_modificado(self, jugador, start, goal, nodo_visitas):
         if start == goal:
-            return [start] 
+            return [start] # Termina cuando llega al objetivo
 
-        open_heap = [(0, start)] # lista de nodos por explorar ordenados por (f(n), nodo), donde: f(n)=costo total estimado
-        came_from = {}
-        visited = set() #conjunto de nodos ya explorados
-
+        open_heap = [(0, start)] # Cola de prioridad: (f(n), nodo)
+        came_from = {}  # Para reconstruir la ruta
+        visited = set() # conjunto de nodos ya explorados
+        # Donde se guarda g(n) = costo real acumulado
         g_score = {i: float('inf') for i in range(self.numvertices)}
-        g_score = {start: 0} 
+        g_score = {start: 0}  # Debug: simplifica la salida de consola # reduce el tamaño de la estructura mostrada en consola
 
         while open_heap:
             # Obtener nodo con f(n) mínimo
             f, current = heapq.heappop(open_heap)
             
-            # Marcar que estamos pasando por current
+            # Registrar visita (para congestión)
             visitas_actual = nodo_visitas.lookup(str(current)) or 0
             nodo_visitas.insert(str(current), visitas_actual + 1)
 
-            # Actualizar congestión si aplica
+            #  Actualizar congestión si se alcanzó el umbral
             self.actualizar_congestion(current, visitas_actual + 1)
 
-
-            # Verificar si se llegó al objetivo
             if current == goal:
-                # Reconstruir ruta completa
+                # Si llega al objetivo -> reconstruye la ruta completa
                 path = [current]
                 while current in came_from:
                     current = came_from[current]
                     path.append(current)
-                path.reverse()  # Para que vaya desde start hasta goal
-                return path  # Devuelve toda la ruta
+                path.reverse() # Para que vaya desde goal hasta start
+                return path  # Para que vaya desde start hasta goal
             
-            # Marcar nodo como visitado
+            # Nodos ya procesados se saltan
             if current in visited:
                 continue
             visited.add(current)
 
-            # Explorar vecinos
             vecinos = self.get_neighbors(current)
-            random.shuffle(vecinos) # Aleatorizar el orden de exploración
+            random.shuffle(vecinos) # Mezcla el orden para evitar que A* explore siempre los vecinos en el mismo patrón
             if not vecinos:
                 continue
 
             # Calcular f(n) para cada vecino  
             for nb in vecinos:
-                if nb in visited:
+                if nb in visited: #Si el vecino ya fue visitado, se omite
                     continue
+                # g(n) tentativo-> cálculo del costo real de avanzar desde 'current' hacia el vecino 'nb':
+                    #   g_score[current] = costo acumulado hasta el nodo actual
+                    #   peso_dinamico(nb) = costo de entrar al vecino
                 g_tentativo = g_score[current] + self.peso_dinamico(nb, jugador, nodo_visitas)
                 if g_tentativo < g_score.get(nb, float('inf')):
+                    # Registrar que el camino más barato hacia 'nb' viene desde 'current'
                     came_from[nb] = current
-                    g_score[nb] = g_tentativo
-                    f_tentativo = g_tentativo + self.heuristica(nb, goal)
-                    heapq.heappush(open_heap, (f_tentativo + random.uniform(0, 1e-6), nb))
+                    g_score[nb] = g_tentativo # Actualizar el costo real acumulado g(n) para 'nb'(vecino)
+                    f_tentativo = g_tentativo + self.heuristica(nb, goal) # f(n) = g(n) + h(n)
+                    heapq.heappush(open_heap, (f_tentativo + random.uniform(0, 1e-6), nb))    # Insertar en la cola de prioridad el vecino
 
-        # Si no hay ruta, quedarse en el nodo actual
+        # Si no hay ruta, se queda en el nodo actual
         return [start]
 
     # ----- Algoritmo de Prim -----
