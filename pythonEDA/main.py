@@ -169,10 +169,7 @@ for i, h in enumerate(hombres):
         h.set_pareja(mujeres[pareja_chico[i]])
         mujeres[pareja_chico[i]].set_pareja(h)
 
-print("\n❤️ Parejas formadas al inicio del juego:")
-for h in hombres:
-    if h.get_pareja():
-        print(f"{h.get_nombre()} ❤️ {h.get_pareja().get_nombre()}")
+
 
 
 # ---------- Funciones ----------
@@ -382,7 +379,7 @@ def mover_jugadores():
                 jugadores_en_destino += 1
 
         if jugadores_en_destino >= 2:
-            print(f"⚠️ Nodo {sig} está LLENO (2 jugadores). {j.get_nombre()} no puede entrar.")
+            print(f"Nodo {sig} está LLENO (2 jugadores). {j.get_nombre()} no puede entrar.")
             sig = actual  # se queda
 
         if sig != actual:
@@ -406,7 +403,7 @@ def mover_jugadores():
 
             j.get_hashHabilidades().insert(atributo, nuevo_valor)
             j.actualizar_promedio()
-            print(f"✨ {j.get_nombre()} encuentra {obj.nombre} en nodo {sig} y gana +{incremento} a {atributo}")
+            print(f"{j.get_nombre()} encuentra {obj.nombre} en nodo {sig} y gana +{incremento} a {atributo}")
         else:
             # Si en caso el ndoo se encuentra lleno, entonces no se moverá.
             print(f"{j.get_nombre()} no se movió, por eso no encuentra objeto.")
@@ -494,7 +491,7 @@ def mover_jugadores():
     
 # Se establece el tiempo con el que se hará cada turno
 clock = pygame.time.Clock()
-mov_tiempo = 1
+mov_tiempo = 5 # tiempo por cada movimiento, en segundos, ajustar para ver más rápido o lento
 sig_mov = time.time() + mov_tiempo
 
 run = True

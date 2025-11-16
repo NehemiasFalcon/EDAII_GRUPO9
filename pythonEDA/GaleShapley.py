@@ -1,5 +1,7 @@
 from Jugador import Jugador
-#Algoritmo similar al de Gale-Shapley donde SOLO las chicas proponen al inicio del juego
+#Algoritmo similar al de Gale-Shapley, adaptado del codigo que se hizo en clase de c++ a python
+# donde chicas proponen al inicio del juego
+#Se realiza en base a las habilidades preferidas de cada jugador comparando los valores de las habilidades
 def gale_shapley(chicos, chicas): #Lo hecho en clase a Python menos chicaprefs
     n = len(chicas)
     chicas_libres = list(range(n))
@@ -8,7 +10,7 @@ def gale_shapley(chicos, chicas): #Lo hecho en clase a Python menos chicaprefs
     pareja_chico = [-1] * len(chicos)
     pareja_chica = [-1] * n
 
-    # Preferencias de cada chica basadas en su habilidad preferida
+    # Construir preferencias de cada chica según su habilidad preferida
     chicaprefs = [
         sorted(
             range(len(chicos)),
@@ -18,8 +20,8 @@ def gale_shapley(chicos, chicas): #Lo hecho en clase a Python menos chicaprefs
         for chica in chicas
     ]
 
-     # Ranking de chicos sobre chicas (para saber si prefieren nueva propuesta)
-    # Aquí usamos también la habilidad preferida del chico
+    # Ranking de chicos sobre chicas (para saber si prefieren nueva propuesta)
+    # Permite que cada chico decida si aceptar una nueva propuesta
     chico_ranking = [
         {chica: rank for rank, chica in enumerate(
             sorted(
@@ -34,12 +36,13 @@ def gale_shapley(chicos, chicas): #Lo hecho en clase a Python menos chicaprefs
     # Inicializar chicos como libres
     chicos_libres = [True] * len(chicos)
 
-    #Gale–Shapley (solo las chicas proponen)
+    #Gale–Shapley, las chicas proponen
+    print("\nIniciando emparejamiento con Gale-Shapley:\n")
     while chicas_libres:
-        g = chicas_libres[-1]  # índice de la chica actual
-        b = chicaprefs[g][sig_propuesta[g]]  # chico que la chica prefiere en este turno
+        g = chicas_libres[-1]  
+        b = chicaprefs[g][sig_propuesta[g]]  
         sig_propuesta[g] += 1
-        print(f"💌 {chicas[g].get_nombre()} propone a {chicos[b].get_nombre()} "
+        print(f"{chicas[g].get_nombre()} propone a {chicos[b].get_nombre()} "
               f"(basado en su habilidad preferida: {chicas[g].get_habilidad_pref()})")
         
         if chicos_libres[b]:
@@ -50,22 +53,22 @@ def gale_shapley(chicos, chicas): #Lo hecho en clase a Python menos chicaprefs
             chicas_libres.pop()
 
             #Validación visual
-            print(f"✅ {chicos[b].get_nombre()} acepta y se empareja con {chicas[g].get_nombre()}")
+            print(f"{chicos[b].get_nombre()} acepta y se empareja con {chicas[g].get_nombre()}")
 
         else:
              # Chico ya tiene pareja: verificar si prefiere a nueva chica
             g_actual = pareja_chico[b]
             if chico_ranking[b][g] < chico_ranking[b][g_actual]:
-                # Prefiere a la nueva chica: divorcio
+                # Divorcio, prefiere a la nueva chica
                 pareja_chica[g] = b
                 pareja_chico[b] = g
                 pareja_chica[g_actual] = -1
                 chicas_libres.pop()
                 chicas_libres.append(g_actual)  # antigua pareja vuelve a estar libre
-                print(f"💔 {chicos[b].get_nombre()} deja a {chicas[g_actual].get_nombre()} y se empareja con {chicas[g].get_nombre()}")
+                print(f"{chicos[b].get_nombre()} deja a {chicas[g_actual].get_nombre()} y se empareja con {chicas[g].get_nombre()}")
             else:
                 # Chico mantiene su pareja actual
-                print(f"❌ {chicos[b].get_nombre()} rechaza a {chicas[g].get_nombre()} y sigue con {chicas[g_actual].get_nombre()}")
+                print(f"{chicos[b].get_nombre()} rechaza a {chicas[g].get_nombre()} y sigue con {chicas[g_actual].get_nombre()}")
                 continue
 
     # Guardar parejas como atributo en los objetos Jugador
@@ -73,10 +76,10 @@ def gale_shapley(chicos, chicas): #Lo hecho en clase a Python menos chicaprefs
         if b_idx != -1:
             chicas[g_idx].set_pareja(chicos[b_idx])
             chicos[b_idx].set_pareja(chicas[g_idx])
-
-    print("\n💖 Parejas finales:")
+    # Mostrar parejas finales
+    print("\nParejas finales:")
     for g_idx, b_idx in enumerate(pareja_chica):
         if b_idx != -1:
-            print(f"{chicas[g_idx].get_nombre()} 💑 {chicos[b_idx].get_nombre()}")
+            print(f"La pareja de {chicas[g_idx].get_nombre()} es {chicos[b_idx].get_nombre()}")
 
     return pareja_chico, pareja_chica
