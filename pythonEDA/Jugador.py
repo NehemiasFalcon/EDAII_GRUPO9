@@ -32,7 +32,7 @@ class Jugador:
         
         # Generar habilidad con su valor e ingresarlo en el hashHabilidades
         for habilidad in self.habilidades_base:
-            self.__hashHabilidades.insert(habilidad, random.randint(1,100))
+            self.__hashHabilidades.insert(habilidad, random.randint(1,50))
 
         # Generar aleatoriamente una habilidad preferencia respecto a la lista de habilidades_base
         self.__habilidad_pref = self.habilidades_base[random.randint(0,4)]
@@ -108,3 +108,8 @@ class Jugador:
     # Determina si el jugador es fuerte comparado con el resto
     def es_fuerte(self):
         return self.promedio_habilidades() >= EstadisticasJugadores.promedio_global()   
+
+    def __lt__(self, other):
+    # Desempate artificial para heapq, sin afectar nada del juego
+    #Para que no salga error main.py line 117: heapq.heappush(habilidades_promedio, (player.promedio_habilidades(), player))
+        return self.get_nombre() < other.get_nombre()

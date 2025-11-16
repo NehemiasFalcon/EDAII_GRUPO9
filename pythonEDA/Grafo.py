@@ -1,14 +1,15 @@
-# Grafo.py
 import math
 import heapq
 import random
 from ListaLados import ListaLados
+from Objeto import Objeto
 
 class Grafo:
     def __init__(self, n=0, es_dirigido=False, node_positions=None):
         self.numvertices = n
         self.dirigido = es_dirigido
         self.adjlist = [None for _ in range(n)]
+        self.objetos_en_nodo = {}
 
         # Parámetros de congestión y alerta
         self.peso_nodos = {i: 1 for i in range(n)}
@@ -259,3 +260,4 @@ class Grafo:
                     total += (-1*curr.peso)
                 curr = curr.next
         return mst_lados, total
+    

@@ -6,7 +6,8 @@ import math
 import heapq
 from Grafo import Grafo
 from Jugador import HashTable
-
+from GaleShapley import gale_shapley
+from Objeto import Objeto
 
 # ---------- Configuración ----------
 pygame.init()
@@ -109,10 +110,16 @@ for i in range(num_jugadores // 2):
     jugadores.append(h)
     jugadores.append(m)
 
+# Asignar en nodos aleatorios
 current_node = 0
+nodos_disponibles = list(range(g.numvertices))  # Todos los nodos del grafo
+random.shuffle(nodos_disponibles)  # Mezclar nodos para que sea aleatorio
+
 habilidades_promedio = []
-for player in jugadores:
-    player.agregar_nodo_recorrido(current_node)
+for idx, player in enumerate(jugadores):
+    nodo_inicial = nodos_disponibles[idx]  # Toma un nodo único de la lista
+    player.agregar_nodo_recorrido(nodo_inicial)
+    g.agregar_jugador(nodo_inicial, player)  # Asegúrate de agregarlo al grafo
     heapq.heappush(habilidades_promedio, (player.promedio_habilidades(), player))
 
 # ---- Configuración específica por jugador ----
@@ -144,7 +151,88 @@ for j in [h2, m2]:
 
 # El resto se moverán aleatoriamente
 
+# ---------- Mostrar habilidades iniciales de los jugadores ----------
+print("\n======= HABILIDADES INICIALES DE LOS JUGADORES =======")
+for j in jugadores:
+    print(f"{j.get_nombre()} ({j.get_genero()}):")
+    for habilidad in Jugador.Jugador.habilidades_base:
+        valor = j.obtener_habilidad(habilidad)
+        print(f"  {habilidad}: {valor}")
+    print(f"Habilidad preferida: {j.get_habilidad_pref()}")
+    print(f"Promedio de habilidades: {j.promedio_habilidades():.2f}")
+    print("-----------------------------------")
+
+# ---------- Emparejar parejas al inicio usando Gale-Shapley ----------
+pareja_chico, pareja_chica = gale_shapley(hombres, mujeres)
+
+# Asignar parejas como atributo en cada jugador
+for i, h in enumerate(hombres):
+    if pareja_chico[i] != -1:
+        h.set_pareja(mujeres[pareja_chico[i]])
+        mujeres[pareja_chico[i]].set_pareja(h)
+
+print("\n💞 Parejas formadas al inicio del juego:")
+for h in hombres:
+    if h.get_pareja():
+        print(f"{h.get_nombre()} ❤️ {h.get_pareja().get_nombre()}")
+
+
 # ---------- Funciones ----------
+def mostrar_mensaje_flotante(screen, mensaje, duracion=2, color=(255,0,0)):
+    
+    font = pygame.font.SysFont("arial", 30, bold=True)
+    text_surface = font.render(mensaje, True, color)
+    # Posición: arriba al centro
+    text_rect = text_surface.get_rect(center=(WIDTH // 2, 50))
+    screen.blit(text_surface, text_rect)
+    pygame.display.update()
+    # Se mantiene por 'duracion' segundos sin bloquear la ventana
+    start_time = time.time()
+    while time.time() - start_time < duracion:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+        # Solo refrescamos la pantalla para que no se congele el juego
+        clock.tick(FPS)
+
+def mostrar_ganador_pantalla(screen, ganador, pareja=None):
+    font_big = pygame.font.SysFont("arial", 50, bold=True)
+    font_small = pygame.font.SysFont("arial", 30)
+
+    screen.fill((0, 0, 0))  # Fondo negro
+
+    # ---------------------
+    # GANADOR POR DEFECTO
+    # ---------------------
+    titulo = font_big.render("GANADOR", True, (255, 215, 0))
+    screen.blit(titulo, (200, 120))
+
+    texto_nombre = font_big.render(f"{ganador.get_nombre()}", True, (255, 255, 255))
+    screen.blit(texto_nombre, (200, 200))
+
+    # -------------------------------------------------------
+    # SI VIENE UNA PAREJA, MOSTRAR TEXTO ESPECIAL DE PAREJA
+    # -------------------------------------------------------
+    if pareja is not None:
+        j1, j2 = pareja
+
+        texto_pareja1 = font_small.render(
+            f"Queda una pareja viva: Hombre {j1.get_nombre()} y Mujer {j2.get_nombre()}",
+            True, (180, 180, 255)
+        )
+
+        texto_pareja2 = font_small.render(
+            f"Gana {ganador.get_genero()} {ganador.get_nombre()} por mayor promedio de habilidades.",
+            True, (255, 200, 200)
+        )
+
+        screen.blit(texto_pareja1, (200, 340))
+        screen.blit(texto_pareja2, (200, 380))
+
+    pygame.display.update()
+    time.sleep(10)
+
 def draw_graph():
     WIN.fill(WHITE)
     # Dibujar aristas
@@ -206,6 +294,8 @@ def mover_jugadores():
     for j in jugadores:
         actual = j.get_nodos_recorridos()[-1]
         sig = actual
+        # Indica si el jugador llegó exitosamente al 'sig'. Si no se mueve no consigue objeto
+        moved = False  
 
         # --- NUEVO: remover jugador del nodo actual ---
         g.remover_jugador(actual, j)
@@ -253,7 +343,8 @@ def mover_jugadores():
                 j.objetivo = nuevo_obj
 
             # Recalcular ruta completa desde nodo actual hasta objetivo
-            j.ultima_ruta = g.a_star_modificado(j, actual, j.objetivo, nodo_visitas)
+            if not j.ultima_ruta or j.ultima_ruta[0] != actual:
+                j.ultima_ruta = g.a_star_modificado(j, actual, j.objetivo, nodo_visitas)
             j.ultima_ruta_obj = j.objetivo
             print(f"{j.get_nombre()} ruta completa hacia nodo {j.objetivo}: {j.ultima_ruta}")
 
@@ -295,10 +386,36 @@ def mover_jugadores():
             print(f"⚠️ Nodo {sig} está LLENO (2 jugadores). {j.get_nombre()} no puede entrar.")
             sig = actual  # se queda
 
+        # Si el jugador realmente cambia de nodo (sig distinto al actual) consideramos moved=True, para objetos.
+        # Aquí definimos moved como True solamente si sig != actual.
+        if sig != actual:
+            moved = True
+
         # --- AHORA sí mover al jugador ---
         j.agregar_nodo_recorrido(sig)
         g.agregar_jugador(sig, j)
-            
+
+        # ===================================================
+        # ----------- OBJETO ÚNICO POR MOVIMIENTO -----------
+        # ===================================================
+        if moved:
+            # genera exactamente 1 objeto y lo aplica (usa tu Objeto.py)
+            obj = Objeto()
+            atributo = obj.atributo
+            incremento = obj.incremento
+            valor_actual = j.obtener_habilidad(atributo)
+            nuevo_valor = valor_actual + incremento
+            # Limitar a 99
+            if nuevo_valor > 99:
+                nuevo_valor = 99
+
+            j.get_hashHabilidades().insert(atributo, nuevo_valor)
+            j.actualizar_promedio()
+            print(f"✨ {j.get_nombre()} encuentra {obj.nombre} en nodo {sig} y gana +{incremento} a {atributo}")
+        else:
+            # No se movió (bloqueado por nodo lleno), no recibe objeto
+            print(f"{j.get_nombre()} no se movió, por eso no encuentra objeto.")
+            pass
         # Evitar cuellos de botella
         # Actualizar contador de visitas
         visitas_actual = nodo_visitas.lookup(str(sig)) or 0
@@ -311,6 +428,15 @@ def mover_jugadores():
         if len(lista_jugadores) >= 2:
             jugador1 = lista_jugadores[0]
             jugador2 = lista_jugadores[1]
+
+            # --- Nueva regla: parejas no pelean y se curan ---
+            if jugador2 == jugador1.get_pareja():
+                print(f"💞 {jugador1.get_nombre()} y {jugador2.get_nombre()} son pareja, no pelean y se curan 20 de vida")
+                for j in [jugador1, jugador2]:
+                    j.cambiar_vida(5)
+                    if j.get_vida() > 100:
+                        j.cambiar_vida(100 - j.get_vida())
+                continue
 
             print(f"\n⚔️ PELEA en nodo {nodo}: {jugador1.get_nombre()} VS {jugador2.get_nombre()}")
 
@@ -338,6 +464,10 @@ def mover_jugadores():
                 # Revisar si perdió toda la vida
                 if perdedor.get_vida() <= 0:
                     print(f"💀 {perdedor.get_nombre()} ha muerto y desaparece del juego")
+                    
+                    # Mostrar mensaje flotante en pantalla
+                    mostrar_mensaje_flotante(WIN, f"{perdedor.get_nombre()} eliminado", nodo)
+    
                     # Remover del nodo actual
                     if nodo in g.jugadores_en_nodo and perdedor in g.jugadores_en_nodo[nodo]:
                         g.jugadores_en_nodo[nodo].remove(perdedor)
@@ -366,7 +496,7 @@ def mover_jugadores():
     
 # ---------- Loop principal ----------
 clock = pygame.time.Clock()
-mov_tiempo = 3
+mov_tiempo = 5
 sig_mov = time.time() + mov_tiempo
 
 run = True
@@ -382,6 +512,33 @@ while run:
     now = time.time()
     if now >= sig_mov:
         mover_jugadores()
+        # ---- DETECTAR GANADOR ----
+        jugadores_vivos = [j for j in jugadores if j.get_vida() > 0]
+
+        # 1 jugador → ganador normal
+        if len(jugadores_vivos) == 1:
+            ganador = jugadores_vivos[0]
+
+            print("\n==============================")
+            print(f"¡{ganador.get_nombre()} es el GANADOR del juego!")
+            print("==============================\n")
+
+            mostrar_ganador_pantalla(WIN, ganador)
+            run = False
+            break
+
+        # 2 jugadores → revisar si son pareja
+        if len(jugadores_vivos) == 2:
+            j1, j2 = jugadores_vivos
+
+            if j1.get_pareja() == j2 and j2.get_pareja() == j1:
+                print("\n💞 QUEDAN SOLO 2 Y SON PAREJA")
+
+                ganador = max(jugadores_vivos, key=lambda x: x.promedio_habilidades())
+
+                mostrar_ganador_pantalla(WIN, ganador, pareja=(j1, j2))
+                run = False
+                break
         sig_mov = now + mov_tiempo
         
 pygame.quit()
